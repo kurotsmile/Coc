@@ -4,7 +4,7 @@ import threading
 import time
 import tkinter as tk
 import json
-from tkinter import font as tkfont, messagebox, simpledialog, ttk
+from tkinter import filedialog, font as tkfont, messagebox, simpledialog, ttk
 from pathlib import Path
 
 ADB_PATH = "adb"
@@ -349,6 +349,7 @@ class App(tk.Tk):
             self.destroy()
             return
 
+        self.theme_var = tk.StringVar(value="light")
         self.recorders = {}
         self.current_events = []
         self.macro_map = {}
@@ -358,6 +359,31 @@ class App(tk.Tk):
         self._build_ui()
         self._load_saved_devices()
         self.refresh_macro_list()
+
+    def _create_menu(self):
+        menu_bar = tk.Menu(self)
+
+        tools_menu = tk.Menu(menu_bar, tearoff=0)
+        tools_menu.add_command(label="Export Data...", command=self.export_data)
+        tools_menu.add_command(label="Import Data...", command=self.import_data)
+        menu_bar.add_cascade(label="Tools", menu=tools_menu)
+
+        theme_menu = tk.Menu(menu_bar, tearoff=0)
+        theme_menu.add_radiobutton(
+            label="Light Mode",
+            value="light",
+            variable=self.theme_var,
+            command=lambda: self.set_theme("light"),
+        )
+        theme_menu.add_radiobutton(
+            label="Dark Mode",
+            value="dark",
+            variable=self.theme_var,
+            command=lambda: self.set_theme("dark"),
+        )
+        menu_bar.add_cascade(label="Theme", menu=theme_menu)
+
+        self.config(menu=menu_bar)
 
     def _load_config_payload(self):
         if not DEVICE_LIST_FILE.exists():
@@ -408,132 +434,236 @@ class App(tk.Tk):
         return False
 
     def _configure_styles(self):
-        style = ttk.Style(self)
-        if "clam" in style.theme_names():
-            style.theme_use("clam")
+        self.style = ttk.Style(self)
+        if "clam" in self.style.theme_names():
+            self.style.theme_use("clam")
 
-        title_font = tkfont.Font(family="Helvetica", size=15, weight="bold")
-        subtitle_font = tkfont.Font(family="Helvetica", size=9)
-        section_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
-        button_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
+        self.title_font = tkfont.Font(family="Helvetica", size=15, weight="bold")
+        self.subtitle_font = tkfont.Font(family="Helvetica", size=9)
+        self.section_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
+        self.button_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
+        self._apply_theme()
 
-        style.configure("App.TFrame", background="#f4f7fb")
-        style.configure("Hero.TFrame", background="#f4f7fb")
-        style.configure("Panel.TFrame", background="#ffffff")
-        style.configure("PanelBar.TFrame", background="#ffffff")
-        style.configure(
+    def _get_theme_palette(self):
+        if self.theme_var.get() == "dark":
+            return {
+                "window_bg": "#111827",
+                "hero_bg": "#111827",
+                "panel_bg": "#1f2937",
+                "panel_fg": "#e5e7eb",
+                "muted_fg": "#9ca3af",
+                "body_fg": "#d1d5db",
+                "status_fg": "#7dd3fc",
+                "input_bg": "#111827",
+                "input_fg": "#e5e7eb",
+                "button_bg": "#374151",
+                "button_hover": "#4b5563",
+                "button_press": "#6b7280",
+                "button_disabled": "#1f2937",
+                "button_disabled_fg": "#6b7280",
+                "primary_bg": "#2563eb",
+                "primary_hover": "#1d4ed8",
+                "primary_press": "#1e40af",
+                "primary_disabled": "#4b6fb3",
+                "danger_bg": "#dc2626",
+                "danger_hover": "#b91c1c",
+                "danger_press": "#991b1b",
+                "danger_disabled": "#7f3b3b",
+                "danger_disabled_fg": "#f5d0d0",
+                "accent_bg": "#059669",
+                "accent_hover": "#047857",
+                "accent_press": "#065f46",
+                "accent_disabled": "#3d7a6b",
+                "accent_disabled_fg": "#d1fae5",
+                "tree_bg": "#111827",
+                "tree_fg": "#e5e7eb",
+                "tree_selected_bg": "#1d4ed8",
+                "tree_selected_fg": "#ffffff",
+                "tree_heading_bg": "#374151",
+                "tree_heading_fg": "#f9fafb",
+                "separator_bg": "#374151",
+                "scroll_bg": "#4b5563",
+                "scroll_trough": "#111827",
+                "scroll_arrow": "#e5e7eb",
+                "scroll_active": "#6b7280",
+            }
+        return {
+            "window_bg": "#f4f7fb",
+            "hero_bg": "#f4f7fb",
+            "panel_bg": "#ffffff",
+            "panel_fg": "#18324a",
+            "muted_fg": "#627d98",
+            "body_fg": "#243b53",
+            "status_fg": "#1f6aa5",
+            "input_bg": "#ffffff",
+            "input_fg": "#243b53",
+            "button_bg": "#eef4fa",
+            "button_hover": "#e3edf7",
+            "button_press": "#d7e5f2",
+            "button_disabled": "#f4f7fb",
+            "button_disabled_fg": "#9fb3c8",
+            "primary_bg": "#1f6aa5",
+            "primary_hover": "#185a8c",
+            "primary_press": "#144b72",
+            "primary_disabled": "#9fc2db",
+            "danger_bg": "#d64545",
+            "danger_hover": "#bd3636",
+            "danger_press": "#a82c2c",
+            "danger_disabled": "#edb3b3",
+            "danger_disabled_fg": "#f7e8e8",
+            "accent_bg": "#2f855a",
+            "accent_hover": "#276749",
+            "accent_press": "#22543d",
+            "accent_disabled": "#9fceb6",
+            "accent_disabled_fg": "#e5f3eb",
+            "tree_bg": "#ffffff",
+            "tree_fg": "#243b53",
+            "tree_selected_bg": "#d9eaf7",
+            "tree_selected_fg": "#102a43",
+            "tree_heading_bg": "#e9f1f8",
+            "tree_heading_fg": "#102a43",
+            "separator_bg": "#d9e2ec",
+            "scroll_bg": "#d9e6f2",
+            "scroll_trough": "#f5f8fb",
+            "scroll_arrow": "#486581",
+            "scroll_active": "#c7d9ea",
+        }
+
+    def _apply_theme(self):
+        colors = self._get_theme_palette()
+        self.configure(bg=colors["window_bg"])
+
+        self.style.configure("App.TFrame", background=colors["window_bg"])
+        self.style.configure("Hero.TFrame", background=colors["hero_bg"])
+        self.style.configure("Panel.TFrame", background=colors["panel_bg"])
+        self.style.configure("PanelBar.TFrame", background=colors["panel_bg"])
+        self.style.configure(
             "Panel.TLabelframe",
-            background="#ffffff",
+            background=colors["panel_bg"],
             borderwidth=1,
             relief="solid",
         )
-        style.configure(
+        self.style.configure(
             "Panel.TLabelframe.Label",
-            background="#ffffff",
-            foreground="#18324a",
-            font=section_font,
+            background=colors["panel_bg"],
+            foreground=colors["panel_fg"],
+            font=self.section_font,
         )
-        style.configure("HeaderTitle.TLabel", background="#f4f7fb", foreground="#102a43", font=title_font)
-        style.configure("HeaderSub.TLabel", background="#f4f7fb", foreground="#627d98", font=subtitle_font)
-        style.configure("PanelSub.TLabel", background="#ffffff", foreground="#627d98", font=subtitle_font)
-        style.configure("Section.TLabel", background="#ffffff", foreground="#243b53", font=section_font)
-        style.configure("TLabel", background="#ffffff", foreground="#243b53")
-        style.configure("TCheckbutton", background="#ffffff", foreground="#243b53")
-        style.configure("Status.TLabel", background="#ffffff", foreground="#1f6aa5", font=subtitle_font)
-        style.configure("TEntry", padding=(6, 4), fieldbackground="#ffffff")
-        style.configure("TCombobox", padding=(5, 3), fieldbackground="#ffffff", background="#ffffff")
-        style.configure(
+        self.style.configure("HeaderTitle.TLabel", background=colors["hero_bg"], foreground=colors["panel_fg"], font=self.title_font)
+        self.style.configure("HeaderSub.TLabel", background=colors["hero_bg"], foreground=colors["muted_fg"], font=self.subtitle_font)
+        self.style.configure("PanelSub.TLabel", background=colors["panel_bg"], foreground=colors["muted_fg"], font=self.subtitle_font)
+        self.style.configure("Section.TLabel", background=colors["panel_bg"], foreground=colors["body_fg"], font=self.section_font)
+        self.style.configure("TLabel", background=colors["panel_bg"], foreground=colors["body_fg"])
+        self.style.configure("TCheckbutton", background=colors["panel_bg"], foreground=colors["body_fg"])
+        self.style.configure("Status.TLabel", background=colors["panel_bg"], foreground=colors["status_fg"], font=self.subtitle_font)
+        self.style.configure("TEntry", padding=(6, 4), fieldbackground=colors["input_bg"], foreground=colors["input_fg"])
+        self.style.configure("TCombobox", padding=(5, 3), fieldbackground=colors["input_bg"], background=colors["input_bg"], foreground=colors["input_fg"])
+        self.style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", colors["input_bg"])],
+            foreground=[("readonly", colors["input_fg"])],
+        )
+        self.style.configure(
             "TButton",
             padding=(9, 6),
             relief="flat",
             borderwidth=0,
-            font=button_font,
-            foreground="#243b53",
-            background="#eef4fa",
+            font=self.button_font,
+            foreground=colors["body_fg"],
+            background=colors["button_bg"],
         )
-        style.map(
+        self.style.map(
             "TButton",
-            background=[("active", "#e3edf7"), ("pressed", "#d7e5f2"), ("disabled", "#f4f7fb")],
-            foreground=[("disabled", "#9fb3c8")],
+            background=[("active", colors["button_hover"]), ("pressed", colors["button_press"]), ("disabled", colors["button_disabled"])],
+            foreground=[("disabled", colors["button_disabled_fg"])],
         )
-        style.configure(
+        self.style.configure(
             "Action.TButton",
             padding=(9, 6),
             relief="flat",
             borderwidth=0,
-            foreground="#243b53",
-            background="#eef4fa",
+            foreground=colors["body_fg"],
+            background=colors["button_bg"],
         )
-        style.map(
+        self.style.map(
             "Action.TButton",
-            background=[("active", "#e3edf7"), ("pressed", "#d7e5f2"), ("disabled", "#f4f7fb")],
-            foreground=[("disabled", "#9fb3c8")],
+            background=[("active", colors["button_hover"]), ("pressed", colors["button_press"]), ("disabled", colors["button_disabled"])],
+            foreground=[("disabled", colors["button_disabled_fg"])],
         )
-        style.configure(
+        self.style.configure(
             "Primary.TButton",
             padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
-            background="#1f6aa5",
+            background=colors["primary_bg"],
         )
-        style.map(
+        self.style.map(
             "Primary.TButton",
-            background=[("active", "#185a8c"), ("pressed", "#144b72"), ("disabled", "#9fc2db")],
+            background=[("active", colors["primary_hover"]), ("pressed", colors["primary_press"]), ("disabled", colors["primary_disabled"])],
             foreground=[("disabled", "#d9e2ec")],
         )
-        style.configure(
+        self.style.configure(
             "Danger.TButton",
             padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
-            background="#d64545",
+            background=colors["danger_bg"],
         )
-        style.map(
+        self.style.map(
             "Danger.TButton",
-            background=[("active", "#bd3636"), ("pressed", "#a82c2c"), ("disabled", "#edb3b3")],
-            foreground=[("disabled", "#f7e8e8")],
+            background=[("active", colors["danger_hover"]), ("pressed", colors["danger_press"]), ("disabled", colors["danger_disabled"])],
+            foreground=[("disabled", colors["danger_disabled_fg"])],
         )
-        style.configure(
+        self.style.configure(
             "Accent.TButton",
             padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
-            background="#2f855a",
+            background=colors["accent_bg"],
         )
-        style.map(
+        self.style.map(
             "Accent.TButton",
-            background=[("active", "#276749"), ("pressed", "#22543d"), ("disabled", "#9fceb6")],
-            foreground=[("disabled", "#e5f3eb")],
+            background=[("active", colors["accent_hover"]), ("pressed", colors["accent_press"]), ("disabled", colors["accent_disabled"])],
+            foreground=[("disabled", colors["accent_disabled_fg"])],
         )
-        style.configure("Treeview", background="#ffffff", fieldbackground="#ffffff", foreground="#243b53", rowheight=24)
-        style.map("Treeview", background=[("selected", "#d9eaf7")], foreground=[("selected", "#102a43")])
-        style.configure(
+        self.style.configure("Treeview", background=colors["tree_bg"], fieldbackground=colors["tree_bg"], foreground=colors["tree_fg"], rowheight=24)
+        self.style.map("Treeview", background=[("selected", colors["tree_selected_bg"])], foreground=[("selected", colors["tree_selected_fg"])])
+        self.style.configure(
             "Treeview.Heading",
-            background="#e9f1f8",
-            foreground="#102a43",
-            font=section_font,
+            background=colors["tree_heading_bg"],
+            foreground=colors["tree_heading_fg"],
+            font=self.section_font,
             relief="flat",
             padding=(6, 5),
         )
-        style.configure("TSeparator", background="#d9e2ec")
-        style.configure(
+        self.style.configure("TSeparator", background=colors["separator_bg"])
+        self.style.configure(
             "Vertical.TScrollbar",
-            background="#d9e6f2",
-            troughcolor="#f5f8fb",
+            background=colors["scroll_bg"],
+            troughcolor=colors["scroll_trough"],
             borderwidth=0,
-            arrowcolor="#486581",
+            arrowcolor=colors["scroll_arrow"],
             relief="flat",
         )
-        style.map(
+        self.style.map(
             "Vertical.TScrollbar",
-            background=[("active", "#c7d9ea"), ("pressed", "#b6cde3")],
-            arrowcolor=[("active", "#334e68")],
+            background=[("active", colors["scroll_active"]), ("pressed", colors["button_press"])],
+            arrowcolor=[("active", colors["scroll_arrow"])],
         )
 
+    def set_theme(self, mode, persist=True):
+        if mode not in {"light", "dark"}:
+            return
+        self.theme_var.set(mode)
+        self._apply_theme()
+        if persist and hasattr(self, "loop_var"):
+            self._save_devices()
+
     def _build_ui(self):
+        self._create_menu()
         root = ttk.Frame(self, padding=12, style="App.TFrame")
         root.pack(fill="both", expand=True)
 
@@ -778,6 +908,7 @@ class App(tk.Tk):
             devices = payload.get("devices", [])
             history = payload.get("history", [])
             loop_macro = payload.get("loop_macro")
+            theme_mode = str(payload.get("theme_mode", "light")).strip().lower()
             if isinstance(devices, list):
                 clean = [str(x).strip() for x in devices if str(x).strip()]
                 self.saved_devices = clean
@@ -786,6 +917,8 @@ class App(tk.Tk):
                 self._update_history_combo()
             if isinstance(loop_macro, bool):
                 self.loop_var.set(loop_macro)
+            if theme_mode in {"light", "dark"}:
+                self.set_theme(theme_mode, persist=False)
         except Exception:
             self.saved_devices = []
             self.connection_history = []
@@ -798,10 +931,126 @@ class App(tk.Tk):
                 "devices": self.saved_devices,
                 "history": self.connection_history,
                 "loop_macro": self.loop_var.get(),
+                "theme_mode": self.theme_var.get(),
                 "updated_at": int(time.time()),
             }
         )
         self._write_config_payload(payload)
+
+    def _collect_export_payload(self):
+        macros = []
+        MACRO_DIR.mkdir(parents=True, exist_ok=True)
+        for fp in sorted(MACRO_DIR.glob("*.json")):
+            try:
+                payload = json.loads(fp.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            macros.append({"filename": fp.name, "payload": payload})
+
+        return {
+            "exported_at": int(time.time()),
+            "tool_settings": {
+                "devices": list(self.saved_devices),
+                "history": list(self.connection_history),
+                "loop_macro": self.loop_var.get(),
+                "theme_mode": self.theme_var.get(),
+            },
+            "macros": macros,
+        }
+
+    def export_data(self):
+        target = filedialog.asksaveasfilename(
+            parent=self,
+            title="Export Tool Data",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=f"coc_tool_backup_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}.json",
+        )
+        if not target:
+            return
+
+        try:
+            payload = self._collect_export_payload()
+            Path(target).write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+        except Exception as ex:
+            messagebox.showerror("Export Error", f"Unable to export data: {ex}")
+            return
+
+        self.set_status(f"Exported tool data: {Path(target).name}")
+
+    def _build_import_macro_path(self, filename):
+        base = self._safe_name(Path(filename).stem) or "macro"
+        candidate = MACRO_DIR / f"{base}.json"
+        index = 1
+        while candidate.exists():
+            candidate = MACRO_DIR / f"{base}_{index}.json"
+            index += 1
+        return candidate
+
+    def import_data(self):
+        source = filedialog.askopenfilename(
+            parent=self,
+            title="Import Tool Data",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if not source:
+            return
+        if not messagebox.askyesno(
+            "Confirm Import",
+            "Importing will replace current tool settings and macro library. Continue?",
+            parent=self,
+        ):
+            return
+
+        try:
+            raw = Path(source).read_text(encoding="utf-8")
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                raise ValueError("Invalid backup format")
+        except Exception as ex:
+            messagebox.showerror("Import Error", f"Unable to read import file: {ex}")
+            return
+
+        settings = payload.get("tool_settings", {})
+        macros = payload.get("macros", [])
+        if not isinstance(settings, dict) or not isinstance(macros, list):
+            messagebox.showerror("Import Error", "Invalid backup structure.")
+            return
+
+        self.saved_devices = [str(x).strip() for x in settings.get("devices", []) if str(x).strip()]
+        self.connection_history = [str(x).strip() for x in settings.get("history", []) if str(x).strip()]
+        self.loop_var.set(bool(settings.get("loop_macro", False)))
+        self.set_theme(str(settings.get("theme_mode", "light")).strip().lower(), persist=False)
+        self.recorders = {}
+        self.current_events = []
+
+        MACRO_DIR.mkdir(parents=True, exist_ok=True)
+        for existing in MACRO_DIR.glob("*.json"):
+            try:
+                existing.unlink()
+            except Exception:
+                pass
+
+        imported_count = 0
+        for item in macros:
+            if not isinstance(item, dict):
+                continue
+            macro_payload = item.get("payload")
+            filename = str(item.get("filename", "macro.json"))
+            if not isinstance(macro_payload, dict):
+                continue
+            target = self._build_import_macro_path(filename)
+            try:
+                target.write_text(json.dumps(macro_payload, ensure_ascii=True, indent=2), encoding="utf-8")
+                imported_count += 1
+            except Exception:
+                continue
+
+        self._save_devices()
+        self._update_record_device_combo()
+        self.refresh_macro_list()
+        self.lbl_count_var.set("Points in current macro: 0")
+        self.set_status(f"Imported settings and {imported_count} macro(s)")
 
     def _update_history_combo(self):
         return
