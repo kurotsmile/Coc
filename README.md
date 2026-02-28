@@ -15,7 +15,13 @@ Bo cong cu Python ho tro tu dong hoa thao tac cho Clash of Clans qua ADB, gom:
 ## Chay nhanh
 
 ```bash
+./run.command
+./run.bat
+./run.ps1
 python3 gui.py
 python3 main.py
 python3 server.py
 ```
+
+Tren macOS, ban co the bam dup `run.command` de kiem tra moi truong va mo giao dien tool trong tien trinh nen, dong Terminal van khong lam tool tat.
+Tren Windows, dung `run.bat` (CMD) hoac `run.ps1` (PowerShell) de mo giao dien voi hanh vi tuong tu.
