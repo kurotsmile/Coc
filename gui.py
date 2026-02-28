@@ -4,13 +4,15 @@ import threading
 import time
 import tkinter as tk
 import json
-from tkinter import font as tkfont, messagebox, ttk
+from tkinter import font as tkfont, messagebox, simpledialog, ttk
 from pathlib import Path
 
 ADB_PATH = "adb"
 DEBUG_LOG = Path(__file__).with_name("record_debug.log")
 MACRO_DIR = Path(__file__).with_name("macros")
 DEVICE_LIST_FILE = Path(__file__).with_name("devices.json")
+ACTIVATION_KEY_PREFIX = "coc"
+ACTIVATION_KEY_DATE_FORMAT = "%m%Y"
 
 
 class AdbMacroRecorder:
@@ -342,6 +344,10 @@ class App(tk.Tk):
         self.geometry("1040x600")
         self.minsize(940, 540)
         self.configure(bg="#f4f7fb")
+        self.activation_ok = self._ensure_activation()
+        if not self.activation_ok:
+            self.destroy()
+            return
 
         self.recorders = {}
         self.current_events = []
@@ -352,6 +358,54 @@ class App(tk.Tk):
         self._build_ui()
         self._load_saved_devices()
         self.refresh_macro_list()
+
+    def _load_config_payload(self):
+        if not DEVICE_LIST_FILE.exists():
+            return {}
+        try:
+            payload = json.loads(DEVICE_LIST_FILE.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            return {}
+        return {}
+
+    def _write_config_payload(self, payload):
+        DEVICE_LIST_FILE.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+
+    def _expected_activation_key(self):
+        return f"{ACTIVATION_KEY_PREFIX}{time.strftime(ACTIVATION_KEY_DATE_FORMAT, time.localtime())}"
+
+    def _ensure_activation(self):
+        payload = self._load_config_payload()
+        stored_key = str(payload.get("activation_key", "")).strip()
+        if payload.get("activation_ok") and stored_key:
+            return True
+
+        self.withdraw()
+        for _ in range(3):
+            key = simpledialog.askstring(
+                "Activation Required",
+                "Enter your activation key to unlock the tool.",
+                parent=self,
+            )
+            if key is None:
+                messagebox.showerror("Activation", "Activation was cancelled. The tool will now exit.", parent=self)
+                return False
+
+            entered_key = key.strip().lower()
+            if entered_key == self._expected_activation_key():
+                payload["activation_ok"] = True
+                payload["activation_key"] = entered_key
+                payload["activated_at"] = int(time.time())
+                self._write_config_payload(payload)
+                self.deiconify()
+                return True
+
+            messagebox.showerror("Activation", "Invalid activation key.", parent=self)
+
+        messagebox.showerror("Activation", "Too many invalid attempts. The tool will now exit.", parent=self)
+        return False
 
     def _configure_styles(self):
         style = ttk.Style(self)
@@ -716,11 +770,11 @@ class App(tk.Tk):
         return ""
 
     def _load_saved_devices(self):
-        if not DEVICE_LIST_FILE.exists():
+        payload = self._load_config_payload()
+        if not payload:
             self._update_record_device_combo()
             return
         try:
-            payload = json.loads(DEVICE_LIST_FILE.read_text(encoding="utf-8"))
             devices = payload.get("devices", [])
             history = payload.get("history", [])
             loop_macro = payload.get("loop_macro")
@@ -738,13 +792,16 @@ class App(tk.Tk):
         self._update_record_device_combo()
 
     def _save_devices(self):
-        payload = {
-            "devices": self.saved_devices,
-            "history": self.connection_history,
-            "loop_macro": self.loop_var.get(),
-            "updated_at": int(time.time()),
-        }
-        DEVICE_LIST_FILE.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+        payload = self._load_config_payload()
+        payload.update(
+            {
+                "devices": self.saved_devices,
+                "history": self.connection_history,
+                "loop_macro": self.loop_var.get(),
+                "updated_at": int(time.time()),
+            }
+        )
+        self._write_config_payload(payload)
 
     def _update_history_combo(self):
         return
@@ -994,4 +1051,5 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    if getattr(app, "activation_ok", False):
+        app.mainloop()

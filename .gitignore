@@ -1,6 +1,22 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.log
 *.db
 .DS_Store
+
+# Python env and tooling
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# Local app state
+devices.json
+gui_launcher.log
+record_debug.log
+
+# Generated user data
+macros/*.json
