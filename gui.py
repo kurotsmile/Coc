@@ -339,8 +339,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("CoC Macro Recorder (BlueStacks)")
-        self.geometry("1220x680")
-        self.minsize(1120, 620)
+        self.geometry("1040x600")
+        self.minsize(940, 540)
         self.configure(bg="#f4f7fb")
 
         self.recorders = {}
@@ -358,10 +358,10 @@ class App(tk.Tk):
         if "clam" in style.theme_names():
             style.theme_use("clam")
 
-        title_font = tkfont.Font(family="Helvetica", size=18, weight="bold")
-        subtitle_font = tkfont.Font(family="Helvetica", size=10)
-        section_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
-        button_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
+        title_font = tkfont.Font(family="Helvetica", size=15, weight="bold")
+        subtitle_font = tkfont.Font(family="Helvetica", size=9)
+        section_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
+        button_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
 
         style.configure("App.TFrame", background="#f4f7fb")
         style.configure("Hero.TFrame", background="#f4f7fb")
@@ -381,15 +381,16 @@ class App(tk.Tk):
         )
         style.configure("HeaderTitle.TLabel", background="#f4f7fb", foreground="#102a43", font=title_font)
         style.configure("HeaderSub.TLabel", background="#f4f7fb", foreground="#627d98", font=subtitle_font)
+        style.configure("PanelSub.TLabel", background="#ffffff", foreground="#627d98", font=subtitle_font)
         style.configure("Section.TLabel", background="#ffffff", foreground="#243b53", font=section_font)
         style.configure("TLabel", background="#ffffff", foreground="#243b53")
         style.configure("TCheckbutton", background="#ffffff", foreground="#243b53")
         style.configure("Status.TLabel", background="#ffffff", foreground="#1f6aa5", font=subtitle_font)
-        style.configure("TEntry", padding=(8, 6), fieldbackground="#ffffff")
-        style.configure("TCombobox", padding=(6, 4), fieldbackground="#ffffff", background="#ffffff")
+        style.configure("TEntry", padding=(6, 4), fieldbackground="#ffffff")
+        style.configure("TCombobox", padding=(5, 3), fieldbackground="#ffffff", background="#ffffff")
         style.configure(
             "TButton",
-            padding=(12, 8),
+            padding=(9, 6),
             relief="flat",
             borderwidth=0,
             font=button_font,
@@ -403,7 +404,7 @@ class App(tk.Tk):
         )
         style.configure(
             "Action.TButton",
-            padding=(12, 8),
+            padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#243b53",
@@ -416,7 +417,7 @@ class App(tk.Tk):
         )
         style.configure(
             "Primary.TButton",
-            padding=(12, 8),
+            padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
@@ -429,7 +430,7 @@ class App(tk.Tk):
         )
         style.configure(
             "Danger.TButton",
-            padding=(12, 8),
+            padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
@@ -442,7 +443,7 @@ class App(tk.Tk):
         )
         style.configure(
             "Accent.TButton",
-            padding=(12, 8),
+            padding=(9, 6),
             relief="flat",
             borderwidth=0,
             foreground="#ffffff",
@@ -453,7 +454,7 @@ class App(tk.Tk):
             background=[("active", "#276749"), ("pressed", "#22543d"), ("disabled", "#9fceb6")],
             foreground=[("disabled", "#e5f3eb")],
         )
-        style.configure("Treeview", background="#ffffff", fieldbackground="#ffffff", foreground="#243b53", rowheight=30)
+        style.configure("Treeview", background="#ffffff", fieldbackground="#ffffff", foreground="#243b53", rowheight=24)
         style.map("Treeview", background=[("selected", "#d9eaf7")], foreground=[("selected", "#102a43")])
         style.configure(
             "Treeview.Heading",
@@ -461,7 +462,7 @@ class App(tk.Tk):
             foreground="#102a43",
             font=section_font,
             relief="flat",
-            padding=(8, 8),
+            padding=(6, 5),
         )
         style.configure("TSeparator", background="#d9e2ec")
         style.configure(
@@ -479,7 +480,7 @@ class App(tk.Tk):
         )
 
     def _build_ui(self):
-        root = ttk.Frame(self, padding=16, style="App.TFrame")
+        root = ttk.Frame(self, padding=12, style="App.TFrame")
         root.pack(fill="both", expand=True)
 
         root.columnconfigure(0, weight=3)
@@ -487,7 +488,7 @@ class App(tk.Tk):
         root.rowconfigure(1, weight=1)
 
         hero = ttk.Frame(root, style="Hero.TFrame")
-        hero.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
+        hero.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         hero.columnconfigure(0, weight=1)
 
         ttk.Label(hero, text="CoC Macro Control Center", style="HeaderTitle.TLabel").grid(row=0, column=0, sticky="w")
@@ -497,45 +498,37 @@ class App(tk.Tk):
             style="HeaderSub.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
-        left_panel = ttk.LabelFrame(root, text="Device Control", padding=14, style="Panel.TLabelframe")
+        left_panel = ttk.LabelFrame(root, text="Device Control", padding=10, style="Panel.TLabelframe")
         left_panel.grid(row=1, column=0, sticky="nsew")
 
-        right_panel = ttk.LabelFrame(root, text="Macro Library", padding=14, style="Panel.TLabelframe")
-        right_panel.grid(row=1, column=1, sticky="nsew", padx=(16, 0))
+        right_panel = ttk.LabelFrame(root, text="Macro Library", padding=10, style="Panel.TLabelframe")
+        right_panel.grid(row=1, column=1, sticky="nsew", padx=(12, 0))
         right_panel.rowconfigure(1, weight=1)
         right_panel.columnconfigure(0, weight=1)
 
-        ttk.Label(left_panel, text="Device list (comma-separated):", style="Section.TLabel").grid(row=0, column=0, sticky="w")
-        self.devices_var = tk.StringVar(value="127.0.0.1:5555,127.0.0.1:5556")
+        ttk.Label(left_panel, text="Device host:", style="Section.TLabel").grid(row=0, column=0, sticky="w")
+        self.devices_var = tk.StringVar()
         self.devices_entry = ttk.Entry(left_panel, textvariable=self.devices_var)
-        self.devices_entry.grid(row=0, column=1, columnspan=3, sticky="ew", padx=(6, 6))
+        self.devices_entry.grid(row=0, column=1, columnspan=2, sticky="ew", padx=(6, 6))
 
+        ttk.Button(left_panel, text="Add Device", command=self.add_device, style="Action.TButton").grid(
+            row=0, column=3, sticky="ew"
+        )
         ttk.Button(left_panel, text="Connect Devices", command=self.connect_devices, style="Primary.TButton").grid(
-            row=0, column=4, sticky="ew"
+            row=0, column=4, sticky="ew", padx=(6, 0)
         )
         ttk.Button(left_panel, text="Test Tap All", command=self.test_tap_all, style="Action.TButton").grid(
             row=0, column=5, sticky="ew", padx=(6, 0)
         )
 
-        ttk.Label(left_panel, text="Connection history:", style="Section.TLabel").grid(row=1, column=0, sticky="w", pady=(10, 0))
-        self.history_var = tk.StringVar()
-        self.history_combo = ttk.Combobox(left_panel, textvariable=self.history_var, state="readonly")
-        self.history_combo.grid(row=1, column=1, columnspan=3, sticky="ew", padx=(6, 6), pady=(8, 0))
-        ttk.Button(left_panel, text="Reuse", command=self.use_selected_history, style="Action.TButton").grid(
-            row=1, column=4, sticky="ew", pady=(8, 0)
-        )
-        ttk.Button(left_panel, text="Delete History Item", command=self.delete_selected_connection, style="Danger.TButton").grid(
-            row=1, column=5, sticky="ew", padx=(6, 0), pady=(8, 0)
-        )
+        ttk.Label(
+            left_panel,
+            text="Them tung device (vi du: 127.0.0.1:5555), sau do quan ly trong bang ben duoi.",
+            style="PanelSub.TLabel",
+        ).grid(row=1, column=0, columnspan=6, sticky="w", pady=(4, 0))
 
         self.record_device_var = tk.StringVar()
-        ttk.Label(left_panel, text="Connected devices", style="Section.TLabel").grid(row=2, column=0, sticky="w", pady=(14, 0))
-        ttk.Button(left_panel, text="▶ Start Recording", command=self.start_record, style="Accent.TButton").grid(
-            row=2, column=3, sticky="ew", pady=(10, 0)
-        )
-        ttk.Button(left_panel, text="■ Stop Recording", command=self.stop_record, style="Danger.TButton").grid(
-            row=2, column=4, sticky="ew", pady=(10, 0)
-        )
+        ttk.Label(left_panel, text="Device list", style="Section.TLabel").grid(row=2, column=0, sticky="w", pady=(10, 0))
 
         device_wrap = ttk.Frame(left_panel, style="Panel.TFrame")
         device_wrap.grid(row=3, column=0, columnspan=6, sticky="nsew", pady=(6, 0))
@@ -544,60 +537,72 @@ class App(tk.Tk):
 
         self.device_table = ttk.Treeview(
             device_wrap,
-            columns=("device", "status", "screen"),
+            columns=("device", "status", "screen", "action"),
             show="headings",
-            height=5,
+            height=4,
         )
         self.device_table.heading("device", text="Device")
         self.device_table.heading("status", text="Status")
         self.device_table.heading("screen", text="Screen")
-        self.device_table.column("device", width=180, minwidth=140, anchor="w")
-        self.device_table.column("status", width=90, minwidth=80, anchor="center", stretch=False)
-        self.device_table.column("screen", width=110, minwidth=90, anchor="center", stretch=False)
+        self.device_table.heading("action", text="")
+        self.device_table.column("device", width=150, minwidth=120, anchor="w")
+        self.device_table.column("status", width=78, minwidth=68, anchor="center", stretch=False)
+        self.device_table.column("screen", width=92, minwidth=82, anchor="center", stretch=False)
+        self.device_table.column("action", width=78, minwidth=70, anchor="center", stretch=False)
         self.device_table.grid(row=0, column=0, sticky="nsew")
         self.device_table.bind("<<TreeviewSelect>>", self._on_device_select)
+        self.device_table.bind("<Button-1>", self._on_device_table_click, add="+")
 
         device_scroll = ttk.Scrollbar(device_wrap, orient="vertical", command=self.device_table.yview, style="Vertical.TScrollbar")
         device_scroll.grid(row=0, column=1, sticky="ns")
         self.device_table.configure(yscrollcommand=device_scroll.set)
 
-        ttk.Separator(left_panel, orient="horizontal").grid(row=4, column=0, columnspan=6, sticky="ew", pady=10)
-
-        ttk.Label(left_panel, text="Save as name:", style="Section.TLabel").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        self.save_name_var = tk.StringVar(value="macro_1")
-        ttk.Entry(left_panel, textvariable=self.save_name_var).grid(
-            row=5, column=1, columnspan=2, sticky="ew", padx=(6, 6), pady=(4, 0)
-        )
-        ttk.Button(left_panel, text="Save Macro", command=self.save_macro, style="Primary.TButton").grid(
-            row=5, column=3, sticky="ew", pady=(4, 0)
-        )
-
-        ttk.Button(left_panel, text="Play All Devices", command=self.play_all, style="Primary.TButton").grid(
-            row=6, column=3, sticky="ew", pady=(12, 0)
-        )
-        ttk.Button(left_panel, text="Stop Play All", command=self.stop_play_all, style="Danger.TButton").grid(
-            row=6, column=4, sticky="ew", padx=(6, 0), pady=(10, 0)
-        )
+        macro_panel = ttk.LabelFrame(left_panel, text="Macro Controls", padding=10, style="Panel.TLabelframe")
+        macro_panel.grid(row=4, column=0, columnspan=6, sticky="ew", pady=(10, 0))
+        for col in range(6):
+            macro_panel.columnconfigure(col, weight=1)
 
         self.loop_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(left_panel, text="Loop macro", variable=self.loop_var).grid(
-            row=6, column=5, sticky="e", pady=(10, 0)
+        ttk.Button(macro_panel, text="▶ Start Recording", command=self.start_record, style="Accent.TButton").grid(
+            row=0, column=0, sticky="ew"
         )
+        ttk.Button(macro_panel, text="■ Stop Recording", command=self.stop_record, style="Danger.TButton").grid(
+            row=0, column=1, sticky="ew", padx=(6, 0)
+        )
+        ttk.Button(macro_panel, text="Play All Devices", command=self.play_all, style="Primary.TButton").grid(
+            row=0, column=3, sticky="ew", padx=(12, 0)
+        )
+        ttk.Button(macro_panel, text="Stop Play All", command=self.stop_play_all, style="Danger.TButton").grid(
+            row=0, column=4, sticky="ew", padx=(6, 0)
+        )
+        ttk.Checkbutton(macro_panel, text="Loop macro", variable=self.loop_var, command=self._on_loop_toggle).grid(
+            row=0, column=5, sticky="e"
+        )
+
+        ttk.Label(macro_panel, text="Save as name:", style="Section.TLabel").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        self.save_name_var = tk.StringVar(value="macro_1")
+        ttk.Entry(macro_panel, textvariable=self.save_name_var).grid(
+            row=1, column=1, columnspan=2, sticky="ew", padx=(6, 6), pady=(8, 0)
+        )
+        ttk.Button(macro_panel, text="Save Macro", command=self.save_macro, style="Primary.TButton").grid(
+            row=1, column=3, sticky="ew", pady=(8, 0)
+        )
+        ttk.Separator(left_panel, orient="horizontal").grid(row=5, column=0, columnspan=6, sticky="ew", pady=8)
 
         self.lbl_count_var = tk.StringVar(value="Points in current macro: 0")
         ttk.Label(left_panel, textvariable=self.lbl_count_var, style="Section.TLabel").grid(
-            row=7, column=0, columnspan=4, sticky="w", pady=(12, 4)
+            row=6, column=0, columnspan=4, sticky="w", pady=(8, 3)
         )
 
         self.status_var = tk.StringVar(value="Ready")
         ttk.Label(left_panel, textvariable=self.status_var, style="Status.TLabel").grid(
-            row=8, column=0, columnspan=6, sticky="w"
+            row=7, column=0, columnspan=6, sticky="w"
         )
 
         ttk.Label(right_panel, text="Macro list", style="Section.TLabel").grid(row=0, column=0, sticky="w")
 
         table_wrap = ttk.Frame(right_panel, style="Panel.TFrame")
-        table_wrap.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
+        table_wrap.grid(row=1, column=0, sticky="nsew", pady=(4, 0))
         table_wrap.columnconfigure(0, weight=1)
         table_wrap.rowconfigure(0, weight=1)
 
@@ -605,16 +610,16 @@ class App(tk.Tk):
             table_wrap,
             columns=("name", "points", "file", "updated"),
             show="headings",
-            height=12,
+            height=10,
         )
         self.macro_table.heading("name", text="Name")
         self.macro_table.heading("points", text="Points")
         self.macro_table.heading("file", text="File")
         self.macro_table.heading("updated", text="Updated")
-        self.macro_table.column("name", width=120, minwidth=100, anchor="w")
-        self.macro_table.column("points", width=70, minwidth=60, anchor="center", stretch=False)
-        self.macro_table.column("file", width=170, minwidth=140, anchor="w")
-        self.macro_table.column("updated", width=120, minwidth=110, anchor="center", stretch=False)
+        self.macro_table.column("name", width=105, minwidth=90, anchor="w")
+        self.macro_table.column("points", width=58, minwidth=52, anchor="center", stretch=False)
+        self.macro_table.column("file", width=140, minwidth=120, anchor="w")
+        self.macro_table.column("updated", width=108, minwidth=96, anchor="center", stretch=False)
         self.macro_table.grid(row=0, column=0, sticky="nsew")
         self.macro_table.bind("<<TreeviewSelect>>", self._on_macro_select)
         self.macro_table.bind("<Double-1>", lambda _event: self.load_selected_macro())
@@ -624,7 +629,7 @@ class App(tk.Tk):
         self.macro_table.configure(yscrollcommand=macro_scroll.set)
 
         macro_actions = ttk.Frame(right_panel, style="PanelBar.TFrame")
-        macro_actions.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        macro_actions.grid(row=2, column=0, sticky="ew", pady=(6, 0))
         for col in range(3):
             macro_actions.columnconfigure(col, weight=1)
         ttk.Button(macro_actions, text="Load Macro", command=self.load_selected_macro, style="Action.TButton").grid(
@@ -647,17 +652,24 @@ class App(tk.Tk):
     def _set_status_ui(self, text):
         self.status_var.set(text)
 
+    def _on_loop_toggle(self):
+        self._save_devices()
+
     def _update_record_device_combo(self):
         current_selection = self.device_table.selection()
         selected_id = current_selection[0] if current_selection else None
         self.device_table.delete(*self.device_table.get_children())
-        devices = sorted(self.recorders.keys())
+        devices = sorted(set(self.saved_devices) | set(self.recorders.keys()))
         for device in devices:
-            recorder = self.recorders[device]
-            is_online = recorder.is_device_online()
-            status = "Online" if is_online else "Offline"
-            screen = f"{recorder.screen_w}x{recorder.screen_h}"
-            self.device_table.insert("", "end", iid=device, values=(device, status, screen))
+            recorder = self.recorders.get(device)
+            if recorder:
+                is_online = recorder.is_device_online()
+                status = "Online" if is_online else "Offline"
+                screen = f"{recorder.screen_w}x{recorder.screen_h}"
+            else:
+                status = "Saved"
+                screen = "-"
+            self.device_table.insert("", "end", iid=device, values=(device, status, screen, "🗑 Delete"))
 
         if devices and self.record_device_var.get() not in devices:
             self.record_device_var.set(devices[0])
@@ -666,7 +678,7 @@ class App(tk.Tk):
             return
 
         target = selected_id if selected_id in self.recorders else self.record_device_var.get()
-        if target in self.recorders:
+        if target in devices:
             self.device_table.selection_set(target)
             self.device_table.focus(target)
 
@@ -676,49 +688,66 @@ class App(tk.Tk):
             self.record_device_var.set(device)
             self.set_status(f"Selected device: {device}")
 
+    def _on_device_table_click(self, event):
+        region = self.device_table.identify("region", event.x, event.y)
+        if region != "cell":
+            return
+
+        column = self.device_table.identify_column(event.x)
+        item_id = self.device_table.identify_row(event.y)
+        if column != "#4" or not item_id:
+            return
+
+        if not messagebox.askyesno("Confirm", f"Remove device '{item_id}' from the list?"):
+            return "break"
+
+        self.device_table.selection_set(item_id)
+        self.record_device_var.set(item_id)
+        self.delete_selected_connection()
+        return "break"
+
     def _get_selected_device(self):
         selection = self.device_table.selection()
         if selection:
             return selection[0]
         device = self.record_device_var.get().strip()
-        if device in self.recorders:
+        if device in self.saved_devices or device in self.recorders:
             return device
         return ""
 
     def _load_saved_devices(self):
         if not DEVICE_LIST_FILE.exists():
+            self._update_record_device_combo()
             return
         try:
             payload = json.loads(DEVICE_LIST_FILE.read_text(encoding="utf-8"))
             devices = payload.get("devices", [])
             history = payload.get("history", [])
+            loop_macro = payload.get("loop_macro")
             if isinstance(devices, list):
                 clean = [str(x).strip() for x in devices if str(x).strip()]
                 self.saved_devices = clean
-                if clean:
-                    self.devices_var.set(",".join(clean))
             if isinstance(history, list):
                 self.connection_history = [str(x).strip() for x in history if str(x).strip()]
                 self._update_history_combo()
+            if isinstance(loop_macro, bool):
+                self.loop_var.set(loop_macro)
         except Exception:
             self.saved_devices = []
             self.connection_history = []
+        self._update_record_device_combo()
 
     def _save_devices(self):
         payload = {
             "devices": self.saved_devices,
             "history": self.connection_history,
+            "loop_macro": self.loop_var.get(),
             "updated_at": int(time.time()),
         }
         DEVICE_LIST_FILE.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
 
     def _update_history_combo(self):
-        values = list(self.connection_history)
-        self.history_combo["values"] = values
-        if values and self.history_var.get() not in values:
-            self.history_var.set(values[0])
-        if not values:
-            self.history_var.set("")
+        return
 
     def _push_connection_history(self, devices):
         for dev in devices:
@@ -731,41 +760,60 @@ class App(tk.Tk):
         self.connection_history = self.connection_history[:100]
         self._update_history_combo()
 
-    def use_selected_history(self):
-        selected = self.history_var.get().strip()
-        if not selected:
-            messagebox.showwarning("Warning", "Select an item from connection history")
+    def add_device(self):
+        raw = self.devices_var.get().strip()
+        if not raw:
+            messagebox.showwarning("Warning", "Enter a device host first")
             return
-        current = [x.strip() for x in self.devices_var.get().split(",") if x.strip()]
-        if selected not in current:
-            current.append(selected)
-            self.devices_var.set(",".join(current))
-        self.set_status(f"Added to connection list: {selected}")
+
+        items = [x.strip() for x in raw.split(",") if x.strip()]
+        if not items:
+            messagebox.showwarning("Warning", "The device host is invalid")
+            return
+
+        added = []
+        for item in items:
+            if item not in self.saved_devices:
+                self.saved_devices.append(item)
+                added.append(item)
+
+        if not added:
+            self.set_status("Device already exists in the list")
+            return
+
+        self._push_connection_history(added)
+        self._save_devices()
+        self.record_device_var.set(added[-1])
+        self.devices_var.set("")
+        self._update_record_device_combo()
+        self.set_status(f"Added {len(added)} device(s) to the list")
 
     def delete_selected_connection(self):
-        selected = self.history_var.get().strip()
+        selected = self._get_selected_device()
         if not selected:
-            messagebox.showwarning("Warning", "Select a connection history item to delete")
+            messagebox.showwarning("Warning", "Select a device in the table to remove")
             return
         if selected in self.connection_history:
             self.connection_history.remove(selected)
         self.saved_devices = [x for x in self.saved_devices if x != selected]
         if selected in self.recorders:
             self.recorders.pop(selected, None)
-            self._update_record_device_combo()
         self._update_history_combo()
+        self._update_record_device_combo()
         self._save_devices()
-        self.set_status(f"Deleted connection history item: {selected}")
+        self.set_status(f"Removed device: {selected}")
 
     def connect_devices(self):
         raw = self.devices_var.get().strip()
-        if not raw:
-            messagebox.showerror("Error", "Enter at least one device")
-            return
+        if raw:
+            for item in [x.strip() for x in raw.split(",") if x.strip()]:
+                if item not in self.saved_devices:
+                    self.saved_devices.append(item)
+            self.devices_var.set("")
 
-        devices = [x.strip() for x in raw.split(",") if x.strip()]
+        devices = list(dict.fromkeys(self.saved_devices))
         if not devices:
-            messagebox.showerror("Error", "The device list is invalid")
+            messagebox.showerror("Error", "Add at least one device first")
             return
 
         connected = []
@@ -784,7 +832,7 @@ class App(tk.Tk):
         self.recorders = next_recorders
 
         # Luu lai danh sach device connect thanh cong de lan sau dung lai.
-        self.saved_devices = sorted(set(connected)) if connected else devices
+        self.saved_devices = devices
         self._push_connection_history(devices)
         self._save_devices()
 
