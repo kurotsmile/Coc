@@ -439,9 +439,10 @@ class App(tk.Tk):
             self.style.theme_use("clam")
 
         self.title_font = tkfont.Font(family="Helvetica", size=15, weight="bold")
-        self.subtitle_font = tkfont.Font(family="Helvetica", size=9)
-        self.section_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
-        self.button_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
+        self.subtitle_font = tkfont.Font(family="Helvetica", size=10)
+        self.section_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
+        self.button_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
+        self.status_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
         self._apply_theme()
 
     def _get_theme_palette(self):
@@ -554,8 +555,8 @@ class App(tk.Tk):
         self.style.configure("PanelSub.TLabel", background=colors["panel_bg"], foreground=colors["muted_fg"], font=self.subtitle_font)
         self.style.configure("Section.TLabel", background=colors["panel_bg"], foreground=colors["body_fg"], font=self.section_font)
         self.style.configure("TLabel", background=colors["panel_bg"], foreground=colors["body_fg"])
-        self.style.configure("TCheckbutton", background=colors["panel_bg"], foreground=colors["body_fg"])
-        self.style.configure("Status.TLabel", background=colors["panel_bg"], foreground=colors["status_fg"], font=self.subtitle_font)
+        self.style.configure("TCheckbutton", background=colors["panel_bg"], foreground=colors["body_fg"], font=self.subtitle_font)
+        self.style.configure("Status.TLabel", background=colors["panel_bg"], foreground=colors["status_fg"], font=self.status_font)
         self.style.configure("TEntry", padding=(6, 4), fieldbackground=colors["input_bg"], foreground=colors["input_fg"])
         self.style.configure("TCombobox", padding=(5, 3), fieldbackground=colors["input_bg"], background=colors["input_bg"], foreground=colors["input_fg"])
         self.style.map(
@@ -678,7 +679,7 @@ class App(tk.Tk):
         ttk.Label(hero, text="CoC Macro Control Center", style="HeaderTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
             hero,
-            text="Quan ly thiet bi, ghi thao tac va phat macro tren mot giao dien gon, ro va de thao tac hon.",
+            text="Manage devices, record actions, and play macros from a cleaner, more efficient control panel.",
             style="HeaderSub.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
@@ -707,7 +708,7 @@ class App(tk.Tk):
 
         ttk.Label(
             left_panel,
-            text="Them tung device (vi du: 127.0.0.1:5555), sau do quan ly trong bang ben duoi.",
+            text="Add devices one at a time (for example: 127.0.0.1:5555), then manage them in the table below.",
             style="PanelSub.TLabel",
         ).grid(row=1, column=0, columnspan=6, sticky="w", pady=(4, 0))
 
@@ -747,18 +748,20 @@ class App(tk.Tk):
             macro_panel.columnconfigure(col, weight=1)
 
         self.loop_var = tk.BooleanVar(value=False)
-        ttk.Button(macro_panel, text="▶ Start Recording", command=self.start_record, style="Accent.TButton").grid(
-            row=0, column=0, sticky="ew"
+        self.record_toggle_btn = ttk.Button(
+            macro_panel,
+            text="● Start Recording",
+            command=self.toggle_recording,
+            style="Accent.TButton",
         )
-        ttk.Button(macro_panel, text="■ Stop Recording", command=self.stop_record, style="Danger.TButton").grid(
-            row=0, column=1, sticky="ew", padx=(6, 0)
+        self.record_toggle_btn.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.play_toggle_btn = ttk.Button(
+            macro_panel,
+            text="▶ Play All Devices",
+            command=self.toggle_playback,
+            style="Primary.TButton",
         )
-        ttk.Button(macro_panel, text="Play All Devices", command=self.play_all, style="Primary.TButton").grid(
-            row=0, column=3, sticky="ew", padx=(12, 0)
-        )
-        ttk.Button(macro_panel, text="Stop Play All", command=self.stop_play_all, style="Danger.TButton").grid(
-            row=0, column=4, sticky="ew", padx=(6, 0)
-        )
+        self.play_toggle_btn.grid(row=0, column=3, columnspan=2, sticky="ew", padx=(12, 0))
         ttk.Checkbutton(macro_panel, text="Loop macro", variable=self.loop_var, command=self._on_loop_toggle).grid(
             row=0, column=5, sticky="e"
         )
@@ -829,6 +832,7 @@ class App(tk.Tk):
         for col in range(6):
             left_panel.columnconfigure(col, weight=1)
         left_panel.rowconfigure(3, weight=1)
+        self._refresh_action_buttons()
 
     def set_status(self, text):
         self.after(0, self._set_status_ui, text)
@@ -838,6 +842,40 @@ class App(tk.Tk):
 
     def _on_loop_toggle(self):
         self._save_devices()
+
+    def _handle_recorder_status(self, device, text):
+        self.set_status(f"[{device}] {text}")
+        self._refresh_action_buttons()
+
+    def _get_active_recording(self):
+        for device, recorder in self.recorders.items():
+            if recorder.recording:
+                return device, recorder
+        return None, None
+
+    def _is_any_playing(self):
+        return any(recorder.playing for recorder in self.recorders.values())
+
+    def _refresh_action_buttons(self):
+        self.after(0, self._refresh_action_buttons_ui)
+
+    def _refresh_action_buttons_ui(self):
+        if not hasattr(self, "record_toggle_btn") or not hasattr(self, "play_toggle_btn"):
+            return
+
+        _, active_recorder = self._get_active_recording()
+        is_recording = bool(active_recorder)
+        is_playing = self._is_any_playing()
+
+        if is_recording:
+            self.record_toggle_btn.configure(text="■ Stop Recording", style="Danger.TButton")
+        else:
+            self.record_toggle_btn.configure(text="● Start Recording", style="Accent.TButton")
+
+        if is_playing:
+            self.play_toggle_btn.configure(text="■ Stop Playback", style="Danger.TButton")
+        else:
+            self.play_toggle_btn.configure(text="▶ Play All Devices", style="Primary.TButton")
 
     def _update_record_device_combo(self):
         current_selection = self.device_table.selection()
@@ -865,12 +903,14 @@ class App(tk.Tk):
         if target in devices:
             self.device_table.selection_set(target)
             self.device_table.focus(target)
+        self._refresh_action_buttons()
 
     def _on_device_select(self, _event=None):
         device = self._get_selected_device()
         if device:
             self.record_device_var.set(device)
             self.set_status(f"Selected device: {device}")
+        self._refresh_action_buttons()
 
     def _on_device_table_click(self, event):
         region = self.device_table.identify("region", event.x, event.y)
@@ -1108,6 +1148,7 @@ class App(tk.Tk):
         self._update_record_device_combo()
         self._save_devices()
         self.set_status(f"Removed device: {selected}")
+        self._refresh_action_buttons()
 
     def connect_devices(self):
         raw = self.devices_var.get().strip()
@@ -1128,7 +1169,7 @@ class App(tk.Tk):
         for device in devices:
             proc = subprocess.run([ADB_PATH, "connect", device], capture_output=True, text=True)
             out = (proc.stdout + proc.stderr).strip()
-            recorder = AdbMacroRecorder(device, lambda msg, d=device: self.set_status(f"[{d}] {msg}"))
+            recorder = AdbMacroRecorder(device, lambda msg, d=device: self._handle_recorder_status(d, msg))
             if recorder.is_device_online():
                 next_recorders[device] = recorder
                 connected.append(device)
@@ -1147,6 +1188,7 @@ class App(tk.Tk):
         if failed:
             msg += " | " + "; ".join(failed[:2])
         self.set_status(msg)
+        self._refresh_action_buttons()
 
     def test_tap_all(self):
         if not self.recorders:
@@ -1172,15 +1214,26 @@ class App(tk.Tk):
             return
         recorder = self.recorders[device]
         recorder.start_recording()
+        self._refresh_action_buttons()
 
     def stop_record(self):
         device = self._get_selected_device()
-        if not device or device not in self.recorders:
+        recorder = self.recorders.get(device) if device else None
+        if not recorder or not recorder.recording:
+            device, recorder = self._get_active_recording()
+        if not device or not recorder:
             return
-        recorder = self.recorders[device]
         recorder.stop_recording()
         self.current_events = list(recorder.events)
         self.lbl_count_var.set(f"Points in current macro: {len(self.current_events)}")
+        self._refresh_action_buttons()
+
+    def toggle_recording(self):
+        _, recorder = self._get_active_recording()
+        if recorder:
+            self.stop_record()
+            return
+        self.start_record()
 
     def _safe_name(self, text):
         name = re.sub(r"[^a-zA-Z0-9_-]+", "_", text.strip())
@@ -1291,11 +1344,19 @@ class App(tk.Tk):
             started += 1
         mode = "loop" if loop_mode else "one time"
         self.set_status(f"Playback started on {started} devices ({mode})")
+        self._refresh_action_buttons()
 
     def stop_play_all(self):
         for recorder in self.recorders.values():
             recorder.stop_play()
         self.set_status("Playback stopped on all devices")
+        self._refresh_action_buttons()
+
+    def toggle_playback(self):
+        if self._is_any_playing():
+            self.stop_play_all()
+            return
+        self.play_all()
 
 
 if __name__ == "__main__":

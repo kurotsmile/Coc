@@ -44,7 +44,7 @@ def swipe(device, x1, y1, x2, y2, ms=200):
 
 def deploy_troops(device, troop_name, count, points):
     if troop_name not in TROOP_SLOTS:
-        raise ValueError(f"Không có troop: {troop_name}")
+        raise ValueError(f"Unknown troop: {troop_name}")
     sx, sy = TROOP_SLOTS[troop_name]
 
     # Chọn loại lính
@@ -85,11 +85,11 @@ def auto_attack(device):
     end_battle(device)
 
 def run_on_device(device, rounds=1):
-    print(f"[{device}] Bắt đầu {rounds} trận tự động...")
+    print(f"[{device}] Starting {rounds} automated battle(s)...")
     for i in range(1, rounds + 1):
-        print(f"[{device}] Trận {i}/{rounds}")
+        print(f"[{device}] Battle {i}/{rounds}")
         auto_attack(device)
-    print(f"[{device}] Hoàn tất.")
+    print(f"[{device}] Completed.")
 
 def main():
     # Kết nối ADB tới 2 instance BlueStacks
