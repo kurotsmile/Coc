@@ -337,6 +337,229 @@ class AdbMacroRecorder:
             self.playing = False
 
 
+class MacroEditorDialog(tk.Toplevel):
+    def __init__(self, parent, macro_path: Path, on_saved):
+        super().__init__(parent)
+        self.parent = parent
+        self.macro_path = macro_path
+        self.on_saved = on_saved
+        self.payload = self._load_payload()
+        self.events = self._normalize_events(self.payload.get("events", []))
+
+        self.title(f"Edit Macro: {macro_path.name}")
+        self.geometry("760x480")
+        self.minsize(700, 420)
+        self.transient(parent)
+        self.grab_set()
+
+        self.name_var = tk.StringVar(value=str(self.payload.get("name", macro_path.stem)))
+        self.x_var = tk.StringVar()
+        self.y_var = tk.StringVar()
+        self.delay_var = tk.StringVar(value="0.0")
+
+        self._build_ui()
+        self._refresh_table()
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+
+    def _get_theme_colors(self):
+        if hasattr(self.parent, "_get_theme_palette"):
+            return self.parent._get_theme_palette()
+        return {
+            "window_bg": "#f4f7fb",
+            "panel_bg": "#ffffff",
+            "muted_fg": "#627d98",
+        }
+
+    def _load_payload(self):
+        try:
+            payload = json.loads(self.macro_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+        return {"name": self.macro_path.stem, "created_at": int(time.time()), "events": []}
+
+    def _normalize_events(self, events):
+        normalized = []
+        for event in events:
+            try:
+                x = int(event["x"])
+                y = int(event["y"])
+                delay = max(0.0, float(event["delay"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+            normalized.append({"x": x, "y": y, "delay": delay})
+        return normalized
+
+    def _build_ui(self):
+        colors = self._get_theme_colors()
+        self.configure(bg=colors["window_bg"])
+
+        root = ttk.Frame(self, padding=12, style="App.TFrame")
+        root.pack(fill="both", expand=True)
+        root.columnconfigure(0, weight=1)
+        root.rowconfigure(1, weight=1)
+
+        header = ttk.Frame(root, style="Panel.TFrame")
+        header.grid(row=0, column=0, sticky="ew")
+        header.columnconfigure(1, weight=1)
+
+        ttk.Label(header, text="Macro name:", style="Section.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Entry(header, textvariable=self.name_var).grid(row=0, column=1, sticky="ew", padx=(8, 0))
+
+        table_wrap = ttk.Frame(root, style="Panel.TFrame")
+        table_wrap.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
+        table_wrap.columnconfigure(0, weight=1)
+        table_wrap.rowconfigure(0, weight=1)
+
+        self.event_table = ttk.Treeview(
+            table_wrap,
+            columns=("idx", "x", "y", "delay"),
+            show="headings",
+            height=10,
+        )
+        self.event_table.heading("idx", text="#")
+        self.event_table.heading("x", text="X")
+        self.event_table.heading("y", text="Y")
+        self.event_table.heading("delay", text="Delay")
+        self.event_table.column("idx", width=52, minwidth=48, anchor="center", stretch=False)
+        self.event_table.column("x", width=120, minwidth=90, anchor="center")
+        self.event_table.column("y", width=120, minwidth=90, anchor="center")
+        self.event_table.column("delay", width=120, minwidth=90, anchor="center")
+        self.event_table.grid(row=0, column=0, sticky="nsew")
+        self.event_table.bind("<<TreeviewSelect>>", self._on_select)
+
+        scroll = ttk.Scrollbar(table_wrap, orient="vertical", command=self.event_table.yview, style="Vertical.TScrollbar")
+        scroll.grid(row=0, column=1, sticky="ns")
+        self.event_table.configure(yscrollcommand=scroll.set)
+
+        form = ttk.LabelFrame(root, text="Edit Event", padding=10, style="Panel.TLabelframe")
+        form.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        for col in range(8):
+            form.columnconfigure(col, weight=1)
+
+        ttk.Label(form, text="X", style="Section.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Entry(form, textvariable=self.x_var).grid(row=0, column=1, sticky="ew", padx=(6, 8))
+        ttk.Label(form, text="Y", style="Section.TLabel").grid(row=0, column=2, sticky="w")
+        ttk.Entry(form, textvariable=self.y_var).grid(row=0, column=3, sticky="ew", padx=(6, 8))
+        ttk.Label(form, text="Delay", style="Section.TLabel").grid(row=0, column=4, sticky="w")
+        ttk.Entry(form, textvariable=self.delay_var).grid(row=0, column=5, sticky="ew", padx=(6, 8))
+
+        ttk.Button(form, text="Update Row", command=self.update_selected, style="Primary.TButton").grid(row=0, column=6, sticky="ew")
+        ttk.Button(form, text="Add Row", command=self.add_event, style="Action.TButton").grid(row=1, column=6, sticky="ew", pady=(8, 0))
+        ttk.Button(form, text="Delete Row", command=self.delete_selected, style="Danger.TButton").grid(row=1, column=7, sticky="ew", padx=(8, 0), pady=(8, 0))
+
+        footer = ttk.Frame(root, style="Panel.TFrame")
+        footer.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        footer.columnconfigure(0, weight=1)
+
+        ttk.Label(
+            footer,
+            text="Select a row, update values, then save the macro file.",
+            style="PanelSub.TLabel",
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Button(footer, text="Save Macro", command=self.save_macro, style="Primary.TButton").grid(row=0, column=1, sticky="e")
+        ttk.Button(footer, text="Close", command=self.destroy, style="Action.TButton").grid(row=0, column=2, sticky="e", padx=(8, 0))
+
+    def _refresh_table(self, select_index=None):
+        selected = str(select_index) if select_index is not None else None
+        current = self.event_table.selection()
+        if selected is None and current:
+            selected = current[0]
+
+        self.event_table.delete(*self.event_table.get_children())
+        for index, event in enumerate(self.events):
+            self.event_table.insert(
+                "",
+                "end",
+                iid=str(index),
+                values=(index + 1, event["x"], event["y"], f'{event["delay"]:.3f}'),
+            )
+
+        if selected is not None and selected in self.event_table.get_children():
+            self.event_table.selection_set(selected)
+            self.event_table.focus(selected)
+        elif self.event_table.get_children():
+            first = self.event_table.get_children()[0]
+            self.event_table.selection_set(first)
+            self.event_table.focus(first)
+
+    def _get_selected_index(self):
+        selection = self.event_table.selection()
+        if not selection:
+            return None
+        try:
+            return int(selection[0])
+        except ValueError:
+            return None
+
+    def _on_select(self, _event=None):
+        index = self._get_selected_index()
+        if index is None or index >= len(self.events):
+            return
+        event = self.events[index]
+        self.x_var.set(str(event["x"]))
+        self.y_var.set(str(event["y"]))
+        self.delay_var.set(str(event["delay"]))
+
+    def _read_form_event(self):
+        try:
+            x = int(self.x_var.get().strip())
+            y = int(self.y_var.get().strip())
+            delay = max(0.0, float(self.delay_var.get().strip()))
+        except ValueError:
+            messagebox.showerror("Editor", "X, Y, and Delay must be numeric values.", parent=self)
+            return None
+        return {"x": x, "y": y, "delay": delay}
+
+    def update_selected(self):
+        index = self._get_selected_index()
+        if index is None:
+            messagebox.showwarning("Editor", "Select an event row first.", parent=self)
+            return
+        event = self._read_form_event()
+        if event is None:
+            return
+        self.events[index] = event
+        self._refresh_table(select_index=index)
+
+    def add_event(self):
+        event = self._read_form_event()
+        if event is None:
+            return
+        self.events.append(event)
+        self._refresh_table(select_index=len(self.events) - 1)
+
+    def delete_selected(self):
+        index = self._get_selected_index()
+        if index is None:
+            messagebox.showwarning("Editor", "Select an event row first.", parent=self)
+            return
+        self.events.pop(index)
+        next_index = index if index < len(self.events) else len(self.events) - 1
+        self._refresh_table(select_index=next_index if next_index >= 0 else None)
+
+    def _safe_name(self, text):
+        name = re.sub(r"[^a-zA-Z0-9_-]+", "_", text.strip())
+        return name.strip("_") or "macro"
+
+    def save_macro(self):
+        payload = {
+            "name": self._safe_name(self.name_var.get()),
+            "created_at": self.payload.get("created_at", int(time.time())),
+            "events": self.events,
+        }
+        try:
+            self.macro_path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+        except Exception as ex:
+            messagebox.showerror("Editor", f"Unable to save macro: {ex}", parent=self)
+            return
+
+        if callable(self.on_saved):
+            self.on_saved(self.macro_path, payload)
+        self.destroy()
+
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -353,6 +576,7 @@ class App(tk.Tk):
         self.recorders = {}
         self.current_events = []
         self.macro_map = {}
+        self.loaded_macro_path = None
         self.saved_devices = []
         self.connection_history = []
         self._configure_styles()
@@ -795,7 +1019,7 @@ class App(tk.Tk):
 
         self.macro_table = ttk.Treeview(
             table_wrap,
-            columns=("name", "points", "file", "updated"),
+            columns=("name", "points", "file", "updated", "editor"),
             show="headings",
             height=10,
         )
@@ -803,13 +1027,16 @@ class App(tk.Tk):
         self.macro_table.heading("points", text="Points")
         self.macro_table.heading("file", text="File")
         self.macro_table.heading("updated", text="Updated")
+        self.macro_table.heading("editor", text="")
         self.macro_table.column("name", width=105, minwidth=90, anchor="w")
         self.macro_table.column("points", width=58, minwidth=52, anchor="center", stretch=False)
         self.macro_table.column("file", width=140, minwidth=120, anchor="w")
         self.macro_table.column("updated", width=108, minwidth=96, anchor="center", stretch=False)
+        self.macro_table.column("editor", width=74, minwidth=68, anchor="center", stretch=False)
         self.macro_table.grid(row=0, column=0, sticky="nsew")
         self.macro_table.bind("<<TreeviewSelect>>", self._on_macro_select)
         self.macro_table.bind("<Double-1>", lambda _event: self.load_selected_macro())
+        self.macro_table.bind("<Button-1>", self._on_macro_table_click, add="+")
 
         macro_scroll = ttk.Scrollbar(table_wrap, orient="vertical", command=self.macro_table.yview, style="Vertical.TScrollbar")
         macro_scroll.grid(row=0, column=1, sticky="ns")
@@ -1063,6 +1290,7 @@ class App(tk.Tk):
         self.set_theme(str(settings.get("theme_mode", "light")).strip().lower(), persist=False)
         self.recorders = {}
         self.current_events = []
+        self.loaded_macro_path = None
 
         MACRO_DIR.mkdir(parents=True, exist_ok=True)
         for existing in MACRO_DIR.glob("*.json"):
@@ -1225,6 +1453,7 @@ class App(tk.Tk):
             return
         recorder.stop_recording()
         self.current_events = list(recorder.events)
+        self.loaded_macro_path = None
         self.lbl_count_var.set(f"Points in current macro: {len(self.current_events)}")
         self._refresh_action_buttons()
 
@@ -1249,13 +1478,16 @@ class App(tk.Tk):
         file_path = MACRO_DIR / f"{name}_{ts}.json"
         payload = {"name": name, "created_at": ts, "events": self.current_events}
         file_path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-        self.refresh_macro_list()
+        self.loaded_macro_path = file_path
+        self.refresh_macro_list(selected_path=file_path)
         self.set_status(f"Macro saved: {file_path.name}")
 
-    def refresh_macro_list(self):
+    def refresh_macro_list(self, selected_path=None):
         MACRO_DIR.mkdir(parents=True, exist_ok=True)
-        current_selection = self.macro_table.selection()
-        selected_id = current_selection[0] if current_selection else None
+        selected_id = str(selected_path) if selected_path else None
+        if selected_id is None:
+            current_selection = self.macro_table.selection()
+            selected_id = current_selection[0] if current_selection else None
         self.macro_map = {}
         self.macro_table.delete(*self.macro_table.get_children())
         for fp in sorted(MACRO_DIR.glob("*.json"), reverse=True):
@@ -1270,7 +1502,7 @@ class App(tk.Tk):
                     updated = time.strftime("%Y-%m-%d %H:%M", time.localtime(fp.stat().st_mtime))
                 item_id = str(fp)
                 self.macro_map[item_id] = fp
-                self.macro_table.insert("", "end", iid=item_id, values=(name, len(events), fp.name, updated))
+                self.macro_table.insert("", "end", iid=item_id, values=(name, len(events), fp.name, updated, "Edit"))
             except Exception:
                 continue
 
@@ -1295,6 +1527,35 @@ class App(tk.Tk):
             return None
         return self.macro_map.get(selection[0])
 
+    def _on_macro_table_click(self, event):
+        region = self.macro_table.identify("region", event.x, event.y)
+        if region != "cell":
+            return
+
+        column = self.macro_table.identify_column(event.x)
+        item_id = self.macro_table.identify_row(event.y)
+        if column != "#5" or not item_id:
+            return
+
+        self.macro_table.selection_set(item_id)
+        self.macro_table.focus(item_id)
+        self.open_macro_editor(self.macro_map.get(item_id))
+        return "break"
+
+    def open_macro_editor(self, macro_path=None):
+        fp = macro_path or self._get_selected_macro_path()
+        if not fp:
+            messagebox.showwarning("Warning", "Select a macro from the list")
+            return
+        MacroEditorDialog(self, fp, self._on_macro_saved)
+
+    def _on_macro_saved(self, macro_path, payload):
+        self.loaded_macro_path = macro_path
+        self.current_events = list(payload.get("events", []))
+        self.lbl_count_var.set(f"Points in current macro: {len(self.current_events)}")
+        self.refresh_macro_list(selected_path=macro_path)
+        self.set_status(f"Macro updated: {macro_path.name}")
+
     def load_selected_macro(self):
         fp = self._get_selected_macro_path()
         if not fp:
@@ -1308,6 +1569,7 @@ class App(tk.Tk):
             return
 
         self.current_events = events
+        self.loaded_macro_path = fp
         self.lbl_count_var.set(f"Points in current macro: {len(self.current_events)}")
         self.set_status(f"Macro loaded: {fp.name}")
 
@@ -1323,6 +1585,10 @@ class App(tk.Tk):
         except Exception as ex:
             messagebox.showerror("Error", f"Unable to delete macro: {ex}")
             return
+        if self.loaded_macro_path == fp:
+            self.loaded_macro_path = None
+            self.current_events = []
+            self.lbl_count_var.set("Points in current macro: 0")
         self.refresh_macro_list()
         self.set_status(f"Macro deleted: {fp.name}")
 
