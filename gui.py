@@ -946,17 +946,19 @@ class App(tk.Tk):
 
         self.device_table = ttk.Treeview(
             device_wrap,
-            columns=("device", "status", "screen", "action"),
+            columns=("device", "status", "screen", "connection", "action"),
             show="headings",
             height=4,
         )
         self.device_table.heading("device", text="Device")
         self.device_table.heading("status", text="Status")
         self.device_table.heading("screen", text="Screen")
+        self.device_table.heading("connection", text="Connection")
         self.device_table.heading("action", text="")
         self.device_table.column("device", width=150, minwidth=120, anchor="w")
         self.device_table.column("status", width=78, minwidth=68, anchor="center", stretch=False)
         self.device_table.column("screen", width=92, minwidth=82, anchor="center", stretch=False)
+        self.device_table.column("connection", width=96, minwidth=88, anchor="center", stretch=False)
         self.device_table.column("action", width=78, minwidth=70, anchor="center", stretch=False)
         self.device_table.grid(row=0, column=0, sticky="nsew")
         self.device_table.bind("<<TreeviewSelect>>", self._on_device_select)
@@ -1115,10 +1117,17 @@ class App(tk.Tk):
                 is_online = recorder.is_device_online()
                 status = "Online" if is_online else "Offline"
                 screen = f"{recorder.screen_w}x{recorder.screen_h}"
+                connection_action = "Disconnect" if is_online else "Connect"
             else:
-                status = "Saved"
+                status = "Disconnected"
                 screen = "-"
-            self.device_table.insert("", "end", iid=device, values=(device, status, screen, "🗑 Delete"))
+                connection_action = "Connect"
+            self.device_table.insert(
+                "",
+                "end",
+                iid=device,
+                values=(device, status, screen, connection_action, "🗑 Delete"),
+            )
 
         if devices and self.record_device_var.get() not in devices:
             self.record_device_var.set(devices[0])
@@ -1146,7 +1155,17 @@ class App(tk.Tk):
 
         column = self.device_table.identify_column(event.x)
         item_id = self.device_table.identify_row(event.y)
-        if column != "#4" or not item_id:
+        if not item_id:
+            return
+
+        if column == "#4":
+            self.device_table.selection_set(item_id)
+            self.device_table.focus(item_id)
+            self.record_device_var.set(item_id)
+            self.toggle_device_connection(item_id)
+            return "break"
+
+        if column != "#5":
             return
 
         if not messagebox.askyesno("Confirm", f"Remove device '{item_id}' from the list?"):
@@ -1367,6 +1386,7 @@ class App(tk.Tk):
         if not selected:
             messagebox.showwarning("Warning", "Select a device in the table to remove")
             return
+        self._stop_device_activity(selected)
         if selected in self.connection_history:
             self.connection_history.remove(selected)
         self.saved_devices = [x for x in self.saved_devices if x != selected]
@@ -1377,6 +1397,70 @@ class App(tk.Tk):
         self._save_devices()
         self.set_status(f"Removed device: {selected}")
         self._refresh_action_buttons()
+
+    def _build_recorder(self, device):
+        return AdbMacroRecorder(device, lambda msg, d=device: self._handle_recorder_status(d, msg))
+
+    def _stop_device_activity(self, device):
+        recorder = self.recorders.get(device)
+        if not recorder:
+            return
+
+        if recorder.recording:
+            recorder.stop_recording()
+            self.current_events = list(recorder.events)
+            self.loaded_macro_path = None
+            self.lbl_count_var.set(f"Points in current macro: {len(self.current_events)}")
+        if recorder.playing:
+            recorder.stop_play()
+
+    def _connect_device(self, device):
+        recorder = self.recorders.get(device)
+        if recorder and recorder.is_device_online():
+            return True, "Already connected"
+
+        proc = subprocess.run([ADB_PATH, "connect", device], capture_output=True, text=True)
+        out = (proc.stdout + proc.stderr).strip()
+        recorder = self._build_recorder(device)
+        if recorder.is_device_online():
+            self.recorders[device] = recorder
+            return True, out or "Connected"
+
+        self.recorders.pop(device, None)
+        return False, out or "Unable to connect"
+
+    def _disconnect_device(self, device):
+        self._stop_device_activity(device)
+        proc = subprocess.run([ADB_PATH, "disconnect", device], capture_output=True, text=True)
+        out = (proc.stdout + proc.stderr).strip()
+        probe = subprocess.run([ADB_PATH, "-s", device, "get-state"], capture_output=True, text=True)
+        is_online = probe.returncode == 0 and "device" in (probe.stdout or "").strip()
+        if not is_online:
+            self.recorders.pop(device, None)
+            return True, out or "Disconnected"
+        return False, out or "Unable to disconnect"
+
+    def toggle_device_connection(self, device=None):
+        target = device or self._get_selected_device()
+        if not target:
+            messagebox.showwarning("Warning", "Select a device in the table first")
+            return
+
+        recorder = self.recorders.get(target)
+        is_online = bool(recorder and recorder.is_device_online())
+        if is_online:
+            ok, detail = self._disconnect_device(target)
+            status = "Disconnected" if ok else "Disconnect failed"
+        else:
+            ok, detail = self._connect_device(target)
+            if ok:
+                self._push_connection_history([target])
+            status = "Connected" if ok else "Connect failed"
+
+        self._save_devices()
+        self._update_record_device_combo()
+        self._refresh_action_buttons()
+        self.set_status(f"{status}: {target} | {detail}")
 
     def connect_devices(self):
         raw = self.devices_var.get().strip()
@@ -1393,18 +1477,12 @@ class App(tk.Tk):
 
         connected = []
         failed = []
-        next_recorders = {}
         for device in devices:
-            proc = subprocess.run([ADB_PATH, "connect", device], capture_output=True, text=True)
-            out = (proc.stdout + proc.stderr).strip()
-            recorder = AdbMacroRecorder(device, lambda msg, d=device: self._handle_recorder_status(d, msg))
-            if recorder.is_device_online():
-                next_recorders[device] = recorder
+            ok, detail = self._connect_device(device)
+            if ok:
                 connected.append(device)
             else:
-                failed.append(f"{device} ({out})")
-
-        self.recorders = next_recorders
+                failed.append(f"{device} ({detail})")
 
         # Luu lai danh sach device connect thanh cong de lan sau dung lai.
         self.saved_devices = devices
